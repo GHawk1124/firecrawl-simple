@@ -8,7 +8,7 @@ x-common-service: &common-service
     - REDIS_URL=${REDIS_URL:-redis://redis:6379}
     - REDIS_RATE_LIMIT_URL=${REDIS_URL:-redis://redis:6379}
     - PLAYWRIGHT_MICROSERVICE_URL=${PLAYWRIGHT_MICROSERVICE_URL:-http://playwright-service:3000}
-    - PORT=${PORT:-3002}
+    - PORT=${PORT:-3003}
     - NUM_WORKERS_PER_QUEUE=${NUM_WORKERS_PER_QUEUE}
     - BULL_AUTH_KEY=${BULL_AUTH_KEY}
     - TEST_API_KEY=${TEST_API_KEY}
@@ -42,7 +42,7 @@ services:
       - redis
       - puppeteer-service
     ports:
-      - "3002:3002"
+      - "3003:3003"
     command: ["pnpm", "run", "start:production"]
 
   worker:
@@ -52,6 +52,29 @@ services:
       - puppeteer-service
       - api
     command: ["pnpm", "run", "workers"]
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      - "9005:8080"
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:9005/
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-$(openssl rand -hex 32)}
+      - SEARXNG_PORT=9005
+      - SEARXNG_BIND_ADDRESS=0.0.0.0
+    networks:
+      - backend
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
 
   redis:
     image: redis:alpine
